@@ -9,16 +9,17 @@
         body { background: #f4f5f7; padding: 30px; color: #333; }
         .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         h1 { font-size: 22px; margin-bottom: 20px; color: #111; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .form-group { margin-bottom: 18px; }
+        .form-group { margin-bottom: 20px; }
         label { display: block; font-weight: bold; margin-bottom: 6px; font-size: 14px; }
-        input[type="text"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
-        .checkbox-group { display: flex; align-items: center; gap: 8px; margin: 20px 0; background: #f8f9fa; padding: 12px; border-radius: 6px; }
+        input[type="text"], textarea.input-text { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+        textarea.input-text { height: 75px; resize: vertical; line-height: 1.4; }
+        .hint { font-size: 12px; color: #666; margin-top: 4px; font-weight: normal; }
         
         /* 리스트 아이템 디자인 */
         .list-item { background: #f9f9f9; border: 1px solid #e1e1e1; padding: 15px; border-radius: 8px; margin-bottom: 12px; position: relative; }
         .list-item .item-title { font-weight: bold; margin-bottom: 8px; font-size: 13px; color: #555; }
-        .list-inputs { display: flex; gap: 10px; margin-bottom: 8px; }
-        .btn-delete { background: #ff4d4f; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .list-inputs { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+        .btn-delete { background: #ff4d4f; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; align-self: flex-start; }
         
         /* 버튼 디자인 */
         .btn-add { background: #222; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; margin-bottom: 20px; }
@@ -26,7 +27,7 @@
         .btn-generate:hover { background: #0052cc; }
 
         /* 결과 출력창 */
-        textarea { width: 100%; height: 350px; margin-top: 20px; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-family: monospace; font-size: 13px; background: #1e1e1e; color: #00ff66; white-space: pre; }
+        textarea#outputCode { width: 100%; height: 350px; margin-top: 20px; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-family: monospace; font-size: 13px; background: #1e1e1e; color: #00ff66; white-space: pre; }
     </style>
 </head>
 <body>
@@ -36,8 +37,9 @@
 
     <!-- 헤더 입력 -->
     <div class="form-group">
-        <label>헤더 이미지 URL (header_mo.jpg)</label>
-        <input type="text" id="headerImg" placeholder="//shopby-images.../header_mo.jpg">
+        <label>헤더 이미지 태그 전체</label>
+        <input type="text" id="headerImg" placeholder='<img src="//shopby-images.../header_mo.jpg" alt="header_mo.jpg">'>
+        <div class="hint">💡 &lt;img src="..." alt="..."&gt; 태그 전체를 그대로 붙여넣으시면 됩니다.</div>
     </div>
 
     <!-- 상품 컨텐츠 입력 (type_s 흰색 박스 영역) -->
@@ -47,19 +49,26 @@
         <button type="button" class="btn-add" onclick="addListItem()">+ 상품 리스트 추가</button>
     </div>
 
-    <!-- 노티스 입력 (type_s 박스 바깥 배경 유지가 필요한 영역) -->
+    <!-- 노티스 입력 -->
     <div class="form-group">
-        <label>노티스/푸터 이미지 URL (notice_mo.jpg)</label>
-        <input type="text" id="footerImg" placeholder="//shopby-images.../notice_mo.jpg">
+        <label>노티스/푸터 이미지 태그 전체</label>
+        <input type="text" id="footerImg" placeholder='<img src="//shopby-images.../notice_mo.jpg" alt="notice_mo.jpg">'>
+        <div class="hint">💡 &lt;img src="..." alt="..."&gt; 태그 전체를 그대로 붙여넣으시면 됩니다.</div>
     </div>
 
-    <!-- 시크릿 혜택가 유무 -->
-    <div class="checkbox-group">
-        <input type="checkbox" id="hasSecretText" checked>
-        <label for="hasSecretText" style="margin:0; cursor:pointer;">시크릿 혜택가 문구 포함 (현대자동차 보유 고객 전용)</label>
+    <!-- 시크릿 혜택가 유무 및 텍스트 수정 -->
+    <div class="form-group" style="background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e9ecef;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+            <input type="checkbox" id="hasSecretText" checked onchange="toggleSecretText()">
+            <label for="hasSecretText" style="margin:0; cursor:pointer;">하단 안내 문구 포함 (시크릿 혜택가 등)</label>
+        </div>
+        <div id="secretTextWrapper">
+            <label style="font-size: 13px; color: #555;">안내 문구 수정 (HTML 태그 사용 가능):</label>
+            <textarea id="secretTextContent" class="input-text">※ 해당 기획전은<span>'현대자동차 보유 고객 전용'</span>입니다.<br>(상품이 안 보이신다면, 로그인 후 전체 상품을 확인해주세요.)</textarea>
+        </div>
     </div>
 
-    <button type="button" class="btn-generate" onclick="generateCode()">HTML 코드 생성 및 복사</button>
+    <button type="button" class="btn-generate" onclick="generateCode()">HTML 코드 생성 및 자동 복사</button>
 
     <!-- 결과 코드 -->
     <textarea id="outputCode" readonly placeholder="생성된 코드가 여기에 표시됩니다."></textarea>
@@ -68,10 +77,14 @@
 <script>
     let itemCount = 0;
 
-    // 페이지 진입 시 기본 1개 상품 리스트 생성
     window.onload = function() {
         addListItem();
     };
+
+    function toggleSecretText() {
+        const isChecked = document.getElementById('hasSecretText').checked;
+        document.getElementById('secretTextWrapper').style.display = isChecked ? 'block' : 'none';
+    }
 
     function addListItem() {
         itemCount++;
@@ -83,7 +96,7 @@
         itemDiv.innerHTML = `
             <div class="item-title">컨텐츠 0${itemCount}</div>
             <div class="list-inputs">
-                <input type="text" class="img-url" placeholder="상품 이미지 URL (필수)">
+                <input type="text" class="img-tag" placeholder='<img src="//shopby..." alt="..."> 태그 전체 붙여넣기 (필수)'>
                 <input type="text" class="link-url" placeholder="이동할 링크 URL (없으면 빈칸)">
             </div>
             ${itemCount > 1 ? `<button type="button" class="btn-delete" onclick="removeListItem('item-${itemCount}')">삭제</button>` : ''}
@@ -96,10 +109,39 @@
         if (elem) elem.remove();
     }
 
+    // 입력받은 이미지 코드를 감지해서 정확한 <img ...> 태그로 다듬어주는 처리 함수
+    function parseImgTag(rawInput, defaultAlt) {
+        if (!rawInput) return '';
+        let str = rawInput.trim();
+        
+        // <img ... > 완벽한 태그 형태로 입력된 경우
+        if (str.startsWith('<img') && str.endsWith('>')) {
+            return str;
+        }
+        
+        // 앞뒤 < > 괄호만 빠지고 img src=... 형태로 입력된 경우
+        if (str.startsWith('img ')) {
+            str = '<' + str;
+        }
+        if (!str.endsWith('>') && str.startsWith('<img')) {
+            str = str + '>';
+        }
+        if (str.startsWith('<img') && str.endsWith('>')) {
+            return str;
+        }
+
+        // 이미지 주소(URL)만 입력했을 때를 위한 예비 장치
+        return `<img src="${str}" alt="${defaultAlt}">`;
+    }
+
     function generateCode() {
-        const headerImg = document.getElementById('headerImg').value.trim();
-        const footerImg = document.getElementById('footerImg').value.trim();
+        const rawHeader = document.getElementById('headerImg').value;
+        const rawFooter = document.getElementById('footerImg').value;
         const hasSecretText = document.getElementById('hasSecretText').checked;
+        const secretTextContent = document.getElementById('secretTextContent').value.trim();
+
+        const headerTag = parseImgTag(rawHeader, 'header_mo.jpg');
+        const footerTag = parseImgTag(rawFooter, 'notice_mo.jpg');
 
         // 동적 상품 컨텐츠 빌드
         const listItems = document.querySelectorAll('#listContainer .list-item');
@@ -107,22 +149,22 @@
 
         listItems.forEach((item, index) => {
             const num = String(index + 1).padStart(2, '0');
-            const imgUrl = item.querySelector('.img-url').value.trim();
+            const rawImg = item.querySelector('.img-tag').value;
             const linkUrl = item.querySelector('.link-url').value.trim();
 
-            if (!imgUrl) return;
+            if (!rawImg.trim()) return;
 
-            const filename = imgUrl.split('/').pop() || `content_${num}.jpg`;
+            const imgTag = parseImgTag(rawImg, `content_${num}.jpg`);
 
             listHtml += `\t\t\t<!--list${num}-->\n`;
             if (linkUrl) {
-                listHtml += `\t\t\t<a href="${linkUrl}">\n\t\t\t\t<img src="${imgUrl}" alt="${filename}">\n\t\t\t</a>\n\n`;
+                listHtml += `\t\t\t<a href="${linkUrl}">\n\t\t\t\t${imgTag}\n\t\t\t</a>\n\n`;
             } else {
-                listHtml += `\t\t\t<img src="${imgUrl}" alt="${filename}">\n\n`;
+                listHtml += `\t\t\t${imgTag}\n\n`;
             }
         });
 
-        // 메인 코드 템플릿 (Notice를 type_s 바깥으로 배치)
+        // 메인 코드 템플릿
         const finalCode = `<!doctype html>
 <html>
 <head>
@@ -147,17 +189,17 @@
 	<div class="contents">	
 
 		<!--header-->
-		<img src="${headerImg}" alt="header_mo.jpg">
+		${headerTag}
 
 		<!--list-->
 		<div class="type_s">
 ${listHtml}		</div> <!-- .type_s 닫기 -->
 
 		<!--notice-->
-		<img src="${footerImg}" alt="notice_mo.jpg"><br>
+		${footerTag}<br>
 
 ${hasSecretText ? `		<!--text/시크릿혜택가인 경우만 추가-->
-		<p class="s_text">※ 해당 기획전은<span>'현대자동차 보유 고객 전용'</span>입니다.<br>(상품이 안 보이신다면, 로그인 후 전체 상품을 확인해주세요.)</p>
+		<p class="s_text">${secretTextContent}</p>
 		<!--//시크릿혜택가일 경우만-->\n` : ''}
 	</div> <!-- .contents 닫기 -->
 </div> <!-- .wrap 닫기 -->
@@ -168,7 +210,7 @@ ${hasSecretText ? `		<!--text/시크릿혜택가인 경우만 추가-->
         const outputArea = document.getElementById('outputCode');
         outputArea.value = finalCode;
         
-        // 클립보드 자동 복사 기능
+        // 클립보드 자동 복사
         navigator.clipboard.writeText(finalCode).then(() => {
             alert('코드가 성공적으로 생성되었으며, 클립보드에 자동 복사되었습니다!');
         });
