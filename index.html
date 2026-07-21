@@ -4,10 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>기획전 S타입 코드 생성기</title>
+    <!-- VS Code Dark 테마 (Highlight.js) CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background: #f4f5f7; padding: 30px; color: #333; }
-        .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .container { max-width: 950px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         h1 { font-size: 22px; margin-bottom: 20px; color: #111; border-bottom: 2px solid #eee; padding-bottom: 10px; }
         .form-group { margin-bottom: 20px; }
         label { display: block; font-weight: bold; margin-bottom: 6px; font-size: 14px; }
@@ -26,8 +29,13 @@
         .btn-generate { width: 100%; background: #0066ff; color: white; border: none; padding: 14px; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .btn-generate:hover { background: #0052cc; }
 
-        /* 결과 출력창 */
-        textarea#outputCode { width: 100%; height: 350px; margin-top: 20px; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-family: monospace; font-size: 13px; background: #1e1e1e; color: #00ff66; white-space: pre; }
+        /* VS Code 코드 출력 영역 스타일 */
+        .code-wrapper { margin-top: 25px; border-radius: 8px; overflow: hidden; background: #1e1e1e; border: 1px solid #333; }
+        .code-header { display: flex; justify-content: space-between; align-items: center; background: #2d2d2d; padding: 10px 16px; color: #ccc; font-size: 13px; font-weight: bold; border-bottom: 1px solid #3c3c3c; }
+        .btn-copy { background: #0e639c; color: white; border: none; padding: 6px 12px; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: bold; }
+        .btn-copy:hover { background: #1177bb; }
+        pre { margin: 0; padding: 16px; max-height: 450px; overflow: auto; }
+        code { font-family: "Consolas", "Courier New", monospace !important; font-size: 13px; line-height: 1.5; }
     </style>
 </head>
 <body>
@@ -42,7 +50,7 @@
         <div class="hint">💡 &lt;img src="..." alt="..."&gt; 태그 전체를 그대로 붙여넣으시면 됩니다.</div>
     </div>
 
-    <!-- 상품 컨텐츠 입력 (type_s 흰색 박스 영역) -->
+    <!-- 상품 컨텐츠 입력 -->
     <div class="form-group">
         <label>상품 컨텐츠 (type_s 흰색 박스 영역)</label>
         <div id="listContainer"></div>
@@ -68,14 +76,21 @@
         </div>
     </div>
 
-    <button type="button" class="btn-generate" onclick="generateCode()">HTML 코드 생성 및 자동 복사</button>
+    <button type="button" class="btn-generate" onclick="generateCode()">HTML 코드 생성하기</button>
 
-    <!-- 결과 코드 -->
-    <textarea id="outputCode" readonly placeholder="생성된 코드가 여기에 표시됩니다."></textarea>
+    <!-- VS Code 알록달록 결과 출력 박스 -->
+    <div class="code-wrapper">
+        <div class="code-header">
+            <span>📄 생성된 HTML 코드 (VS Code Style)</span>
+            <button type="button" class="btn-copy" onclick="copyCode()">📋 클립보드 복사</button>
+        </div>
+        <pre><code id="outputCode" class="language-xml">생성 버튼을 누르면 여기에 VS Code 스타일로 알록달록하게 코드가 표시됩니다.</code></pre>
+    </div>
 </div>
 
 <script>
     let itemCount = 0;
+    let currentRawCode = '';
 
     window.onload = function() {
         addListItem();
@@ -97,7 +112,7 @@
             <div class="item-title">컨텐츠 0${itemCount}</div>
             <div class="list-inputs">
                 <input type="text" class="img-tag" placeholder='<img src="//shopby..." alt="..."> 태그 전체 붙여넣기 (필수)'>
-                <input type="text" class="link-url" placeholder="이동할 링크 URL (없으면 빈칸)">
+                <input type="text" class="link-url" placeholder="이동할 링크 URL 또는 <a href='...'> 태그 (없으면 빈칸)">
             </div>
             ${itemCount > 1 ? `<button type="button" class="btn-delete" onclick="removeListItem('item-${itemCount}')">삭제</button>` : ''}
         `;
@@ -109,29 +124,24 @@
         if (elem) elem.remove();
     }
 
-    // 입력받은 이미지 코드를 감지해서 정확한 <img ...> 태그로 다듬어주는 처리 함수
+    // 이미지 태그 파싱
     function parseImgTag(rawInput, defaultAlt) {
         if (!rawInput) return '';
         let str = rawInput.trim();
-        
-        // <img ... > 완벽한 태그 형태로 입력된 경우
-        if (str.startsWith('<img') && str.endsWith('>')) {
-            return str;
-        }
-        
-        // 앞뒤 < > 괄호만 빠지고 img src=... 형태로 입력된 경우
-        if (str.startsWith('img ')) {
-            str = '<' + str;
-        }
-        if (!str.endsWith('>') && str.startsWith('<img')) {
-            str = str + '>';
-        }
-        if (str.startsWith('<img') && str.endsWith('>')) {
-            return str;
-        }
-
-        // 이미지 주소(URL)만 입력했을 때를 위한 예비 장치
+        if (str.startsWith('<img') && str.endsWith('>')) return str;
+        if (str.startsWith('img ')) str = '<' + str;
+        if (!str.endsWith('>') && str.startsWith('<img')) str = str + '>';
+        if (str.startsWith('<img') && str.endsWith('>')) return str;
         return `<img src="${str}" alt="${defaultAlt}">`;
+    }
+
+    // 링크 주소 자동 추출 (중복 <a href="..."> 태그 방지)
+    function parseLinkUrl(rawInput) {
+        if (!rawInput) return '';
+        let str = rawInput.trim();
+        const hrefMatch = str.match(/href=["']([^"']+)["']/i);
+        if (hrefMatch) return hrefMatch[1];
+        return str;
     }
 
     function generateCode() {
@@ -143,28 +153,27 @@
         const headerTag = parseImgTag(rawHeader, 'header_mo.jpg');
         const footerTag = parseImgTag(rawFooter, 'notice_mo.jpg');
 
-        // 동적 상품 컨텐츠 빌드
         const listItems = document.querySelectorAll('#listContainer .list-item');
         let listHtml = '';
 
         listItems.forEach((item, index) => {
             const num = String(index + 1).padStart(2, '0');
             const rawImg = item.querySelector('.img-tag').value;
-            const linkUrl = item.querySelector('.link-url').value.trim();
+            const rawLink = item.querySelector('.link-url').value;
 
             if (!rawImg.trim()) return;
 
             const imgTag = parseImgTag(rawImg, `content_${num}.jpg`);
+            const cleanLink = parseLinkUrl(rawLink);
 
             listHtml += `\t\t\t<!--list${num}-->\n`;
-            if (linkUrl) {
-                listHtml += `\t\t\t<a href="${linkUrl}">\n\t\t\t\t${imgTag}\n\t\t\t</a>\n\n`;
+            if (cleanLink) {
+                listHtml += `\t\t\t<a href="${cleanLink}">\n\t\t\t\t${imgTag}\n\t\t\t</a>\n\n`;
             } else {
                 listHtml += `\t\t\t${imgTag}\n\n`;
             }
         });
 
-        // 메인 코드 템플릿
         const finalCode = `<!doctype html>
 <html>
 <head>
@@ -175,15 +184,67 @@
 <body><!--wrap부터 붙여넣기-->
 <div class="wrap">
 	<style>
-		* { box-sizing: border-box; -webkit-box-sizing: border-box; padding: 0; margin: 0; font-family: HyundaiSansTextKRMedium, sans-serif; /*폰트추가*/ } 
-		.contents { max-width: 1224px; background-position-x: center; background-size: 100%; background: #E4DCD3; margin: 0 auto; }
-		.contents img { vertical-align: top; max-width: 100%; margin: 0; }
-		.contents a { display: contents; margin-top: -2px; }
-		.type_s { width: 100%; max-width: 1224px; padding: 0 5% 5%; margin: 0 auto; background: #FFFFFF; /*list BG컬러 수정*/ }
-		.type_s img { margin-bottom: 5%; }
-		.s_text { margin: 0 auto; background: #F7F7F7; color: #000; text-align: center; font-family: HyundaiSansTextKRBold, sans-serif !important; font-size: 3.3vw; margin-top: 0%; padding-top: 7%; padding-bottom: 7%; }
-		.s_text span { color: #E63312; font-family: HyundaiSansTextKRBold, sans-serif !important; }
-		@media screen and (min-width: 760px) { .s_text { font-size: 2rem; } }
+		* {
+			box-sizing: border-box;
+			-webkit-box-sizing: border-box;
+			padding: 0;
+			margin: 0;
+			font-family: HyundaiSansTextKRMedium, sans-serif; /* 폰트추가 */
+		}
+
+		.contents {
+			max-width: 1224px;
+			background-position-x: center;
+			background-size: 100%;
+			background: #E4DCD3;
+			margin: 0 auto;
+		}
+
+		.contents img {
+			vertical-align: top;
+			max-width: 100%;
+			margin: 0;
+		}
+
+		.contents a {
+			display: contents;
+			margin-top: -2px;
+		}
+
+		.type_s {
+			width: 100%;
+			max-width: 1224px;
+			padding: 0 5% 5%;
+			margin: 0 auto;
+			background: #FFFFFF; /* list BG컬러 수정 */
+		}
+
+		.type_s img {
+			margin-bottom: 5%;
+		}
+
+		.s_text {
+			margin: 0 auto;
+			background: #F7F7F7;
+			color: #000;
+			text-align: center;
+			font-family: HyundaiSansTextKRBold, sans-serif !important;
+			font-size: 3.3vw;
+			margin-top: 0%;
+			padding-top: 7%;
+			padding-bottom: 7%;
+		}
+
+		.s_text span {
+			color: #E63312;
+			font-family: HyundaiSansTextKRBold, sans-serif !important;
+		}
+
+		@media screen and (min-width: 760px) {
+			.s_text {
+				font-size: 2rem;
+			}
+		}
 	</style>
 
 	<div class="contents">	
@@ -207,12 +268,27 @@ ${hasSecretText ? `		<!--text/시크릿혜택가인 경우만 추가-->
 </body>
 </html>`;
 
-        const outputArea = document.getElementById('outputCode');
-        outputArea.value = finalCode;
+        currentRawCode = finalCode;
         
-        // 클립보드 자동 복사
+        // Highlight.js를 통한 VS Code 스타일 색상 적용
+        const codeBlock = document.getElementById('outputCode');
+        codeBlock.textContent = finalCode;
+        delete codeBlock.dataset.highlighted;
+        hljs.highlightElement(codeBlock);
+
+        // 자동 클립보드 복사
         navigator.clipboard.writeText(finalCode).then(() => {
             alert('코드가 성공적으로 생성되었으며, 클립보드에 자동 복사되었습니다!');
+        });
+    }
+
+    function copyCode() {
+        if (!currentRawCode) {
+            alert('먼저 코드를 생성해 주세요!');
+            return;
+        }
+        navigator.clipboard.writeText(currentRawCode).then(() => {
+            alert('클립보드에 코드가 복사되었습니다!');
         });
     }
 </script>
