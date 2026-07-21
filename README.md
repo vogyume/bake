@@ -1,2 +1,2 @@
 # bake
-make code = bored
+make code = boring
