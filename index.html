@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>기획전 S타입 코드 생성기</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background: #f4f5f7; padding: 30px; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        h1 { font-size: 22px; margin-bottom: 20px; color: #111; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .form-group { margin-bottom: 18px; }
+        label { display: block; font-weight: bold; margin-bottom: 6px; font-size: 14px; }
+        input[type="text"] { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 14px; }
+        .checkbox-group { display: flex; align-items: center; gap: 8px; margin: 20px 0; background: #f8f9fa; padding: 12px; border-radius: 6px; }
+        
+        /* 리스트 아이템 관련 */
+        .list-item { background: #f9f9f9; border: 1px solid #e1e1e1; padding: 15px; border-radius: 8px; margin-bottom: 12px; position: relative; }
+        .list-item .item-title { font-weight: bold; margin-bottom: 8px; font-size: 13px; color: #555; }
+        .list-inputs { display: flex; gap: 10px; margin-bottom: 8px; }
+        .btn-delete { background: #ff4d4f; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        
+        /* 버튼 영역 */
+        .btn-add { background: #222; color: white; border: none; padding: 10px 16px; border-radius: 6px; cursor: pointer; font-size: 14px; margin-bottom: 20px; }
+        .btn-generate { width: 100%; background: #0066ff; color: white; border: none; padding: 14px; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-generate:hover { background: #0052cc; }
+
+        /* 결과 출력 */
+        textarea { width: 100%; height: 300px; margin-top: 20px; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-family: monospace; font-size: 13px; background: #1e1e1e; color: #00ff66; white-space: pre; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🚀 기획전 S타입 코드 자동 생성기</h1>
+
+    <!-- 헤더 & 푸터 입력 -->
+    <div class="form-group">
+        <label>헤더 이미지 URL (header_mo.jpg)</label>
+        <input type="text" id="headerImg" placeholder="//shopby-images.../header_mo.jpg">
+    </div>
+
+    <!-- 리스트 영역 -->
+    <div class="form-group">
+        <label>상품 리스트 설정</label>
+        <div id="listContainer"></div>
+        <button type="button" class="btn-add" onclick="addListItem()">+ 상품 리스트 추가</button>
+    </div>
+
+    <div class="form-group">
+        <label>푸터(Notice) 이미지 URL (footer_mo.jpg)</label>
+        <input type="text" id="footerImg" placeholder="//shopby-images.../footer_mo.jpg">
+    </div>
+
+    <!-- 시크릿 혜택가 유무 -->
+    <div class="checkbox-group">
+        <input type="checkbox" id="hasSecretText" checked>
+        <label for="hasSecretText" style="margin:0; cursor:pointer;">시크릿 혜택가 문구 포함 (현대자동차 보유 고객 전용)</label>
+    </div>
+
+    <button type="button" class="btn-generate" onclick="generateCode()">HTML 코드 생성하기</button>
+
+    <!-- 생성된 결과 -->
+    <textarea id="outputCode" readonly placeholder="생성된 코드가 여기에 표시됩니다."></textarea>
+</div>
+
+<script>
+    let itemCount = 0;
+
+    // 기본 1개 리스트 항목 추가
+    window.onload = function() {
+        addListItem();
+    };
+
+    function addListItem() {
+        itemCount++;
+        const container = document.getElementById('listContainer');
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'list-item';
+        itemDiv.id = `item-${itemCount}`;
+        
+        itemDiv.innerHTML = `
+            <div class="item-title">리스트 0${itemCount}</div>
+            <div class="list-inputs">
+                <input type="text" class="img-url" placeholder="상품 이미지 URL (필수)">
+                <input type="text" class="link-url" placeholder="이동할 링크 URL (없으면 빈칸)">
+            </div>
+            ${itemCount > 1 ? `<button type="button" class="btn-delete" onclick="removeListItem('item-${itemCount}')">삭제</button>` : ''}
+        `;
+        container.appendChild(itemDiv);
+    }
+
+    function removeListItem(id) {
+        const elem = document.getElementById(id);
+        if (elem) elem.remove();
+    }
+
+    function generateCode() {
+        const headerImg = document.getElementById('headerImg').value.trim();
+        const footerImg = document.getElementById('footerImg').value.trim();
+        const hasSecretText = document.getElementById('hasSecretText').checked;
+
+        // 동적 리스트 파싱
+        const listItems = document.querySelectorAll('#listContainer .list-item');
+        let listHtml = '';
+
+        listItems.forEach((item, index) => {
+            const num = String(index + 1).padStart(2, '0');
+            const imgUrl = item.querySelector('.img-url').value.trim();
+            const linkUrl = item.querySelector('.link-url').value.trim();
+
+            if (!imgUrl) return; // 이미지 주소 없으면 패스
+
+            const filename = imgUrl.split('/').pop() || `product_${num}.jpg`;
+
+            listHtml += `\t\t<!--list${num}-->`;
+            if (linkUrl) {
+                listHtml += `<a href="${linkUrl}">\n\t\t<img src="${imgUrl}" alt="${filename}"></a>\n\n`;
+            } else {
+                listHtml += `\n\t\t<img src="${imgUrl}" alt="${filename}">\n\n`;
+            }
+        });
+
+        // 메인 템플릿 생성
+        const finalCode = `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>기획전 S타입 퍼블리싱</title>
+</head>
+
+<body><!--wrap부터 붙여넣기-->
+<div class="wrap">
+	<style>*{box-sizing: border-box; -webkit-box-sizing: border-box; padding: 0; margin: 0;font-family:HyundaiSansTextKRMedium,sans-serif;/*폰트추가*/} .contents{max-width:1224px;background-position-x:center;background-size:100%;background: #E4DCD3;margin: 0 auto;}.contents img{vertical-align: top;max-width: 100%;margin: 0;}.contents a{display: contents;margin-top:-2px;}
+		 .type_s {width:100%;max-width:1224px; padding:0 5% 5%;margin:0 auto;background: #FFFFFF;/*list BG컬러 수정*/}.type_s img{margin-bottom:5%;}.s_text{margin:0 auto;background: #F7F7F7;color:#000;text-align: center;font-family:HyundaiSansTextKRBold,sans-serif !important;font-size:3.3vw;margin-top:0%;padding-top: 7%;padding-bottom: 7%;}.s_text span{color:#E63312;font-family:HyundaiSansTextKRBold,sans-serif !important;}
+	@media screen and (min-width: 760px) { .s_text {font-size: 2rem;} }
+</style>
+	<div class="contents">	
+
+		<!--header-->
+		<img src="${headerImg}" alt="header_mo.jpg">
+
+		<!--list--><div class="type_s">
+${listHtml}		<!--notice-->
+		<img src="${footerImg}" alt="footer_mo.jpg"><br>
+
+        </div>
+
+${hasSecretText ? `        <!--text/시크릿혜택가인 경우만 추가-->
+	<p class="s_text">※ 해당 기획전은<span>'현대자동차 보유 고객 전용'</span>입니다.<br>(상품이 안 보이신다면, 로그인 후 전체 상품을 확인해주세요.)</p>
+	<!--//시크릿혜택가일 경우만-->\n` : ''}
+</div>
+	</div></div>
+	<!--//여기 위까지 붙여넣기-->
+</body>
+</html>`;
+
+        const outputArea = document.getElementById('outputCode');
+        outputArea.value = finalCode;
+        
+        // 자동 클립보드 복사
+        navigator.clipboard.writeText(finalCode).then(() => {
+            alert('코드가 성공적으로 생성되고 클립보드에 복사되었습니다!');
+        });
+    }
+</script>
+</body>
+</html>
