@@ -7,6 +7,8 @@
     <!-- VS Code Dark 테마 (Highlight.js) CDN -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs2015.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <!-- 코드 자동 정렬 (js-beautify) CDN 추가 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.9/beautify-html.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         body { background: #f4f5f7; padding: 30px; color: #333; }
@@ -124,10 +126,16 @@
         if (elem) elem.remove();
     }
 
+    // 1. 특수 공백(\u00a0 / NBSP) 제거 세척 함수
+    function cleanInput(str) {
+        if (!str) return '';
+        return str.replace(/\u00a0/g, ' ').trim();
+    }
+
     // 이미지 태그 파싱
     function parseImgTag(rawInput, defaultAlt) {
-        if (!rawInput) return '';
-        let str = rawInput.trim();
+        let str = cleanInput(rawInput);
+        if (!str) return '';
         if (str.startsWith('<img') && str.endsWith('>')) return str;
         if (str.startsWith('img ')) str = '<' + str;
         if (!str.endsWith('>') && str.startsWith('<img')) str = str + '>';
@@ -135,20 +143,39 @@
         return `<img src="${str}" alt="${defaultAlt}">`;
     }
 
-    // 링크 주소 자동 추출 (중복 <a href="..."> 태그 방지)
+    // 링크 주소 자동 추출
     function parseLinkUrl(rawInput) {
-        if (!rawInput) return '';
-        let str = rawInput.trim();
+        let str = cleanInput(rawInput);
+        if (!str) return '';
         const hrefMatch = str.match(/href=["']([^"']+)["']/i);
         if (hrefMatch) return hrefMatch[1];
         return str;
+    }
+
+    // 2. 최종 생성된 HTML 코드를 깔끔하게 들여쓰기/정렬하는 함수
+    function formatHTML(rawHtml) {
+        // 특수 공백 세척
+        let cleaned = rawHtml.replace(/\u00a0/g, ' ');
+
+        // js-beautify를 사용한 HTML 포맷팅
+        if (typeof html_beautify !== 'undefined') {
+            return html_beautify(cleaned, {
+                indent_size: 1,
+                indent_char: '\t',           // 탭 들여쓰기 설정
+                max_preserve_newlines: 1,    // 연속 빈 줄 최대 1개만 허용
+                preserve_newlines: true,     // 사용자가 둔 빈줄 구조 보존
+                indent_inner_html: false,    // head/body 태그 내부 기본 들여쓰기 억제
+                extra_liners: []             // 불필요한 자동 빈 줄 삽입 방지
+            });
+        }
+        return cleaned;
     }
 
     function generateCode() {
         const rawHeader = document.getElementById('headerImg').value;
         const rawFooter = document.getElementById('footerImg').value;
         const hasSecretText = document.getElementById('hasSecretText').checked;
-        const secretTextContent = document.getElementById('secretTextContent').value.trim();
+        const secretTextContent = cleanInput(document.getElementById('secretTextContent').value);
 
         const headerTag = parseImgTag(rawHeader, 'header_mo.jpg');
         const footerTag = parseImgTag(rawFooter, 'notice_mo.jpg');
@@ -166,15 +193,15 @@
             const imgTag = parseImgTag(rawImg, `content_${num}.jpg`);
             const cleanLink = parseLinkUrl(rawLink);
 
-            listHtml += `\t\t\t<!--list${num}-->\n`;
+            listHtml += `<!--list${num}-->\n`;
             if (cleanLink) {
-                listHtml += `\t\t\t<a href="${cleanLink}">\n\t\t\t\t${imgTag}\n\t\t\t</a>\n\n`;
+                listHtml += `<a href="${cleanLink}">\n\t${imgTag}\n</a>\n`;
             } else {
-                listHtml += `\t\t\t${imgTag}\n\n`;
+                listHtml += `${imgTag}\n`;
             }
         });
 
-        const finalCode = `<!doctype html>
+        const unformattedCode = `<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
@@ -248,25 +275,28 @@
 	</style>
 
 	<div class="contents">	
-
 		<!--header-->
 		${headerTag}
 
 		<!--list-->
 		<div class="type_s">
-${listHtml}		</div> <!-- .type_s 닫기 -->
+			${listHtml}
+		</div> <!-- .type_s 닫기 -->
 
 		<!--notice-->
 		${footerTag}<br>
 
 ${hasSecretText ? `		<!--text/시크릿혜택가인 경우만 추가-->
 		<p class="s_text">${secretTextContent}</p>
-		<!--//시크릿혜택가일 경우만-->\n` : ''}
+		<!--//시크릿혜택가일 경우만-->` : ''}
 	</div> <!-- .contents 닫기 -->
 </div> <!-- .wrap 닫기 -->
 <!--//여기 위까지 붙여넣기-->
 </body>
 </html>`;
+
+        // 3. 자동 정렬 및 특수 공백 세척 적용
+        const finalCode = formatHTML(unformattedCode);
 
         currentRawCode = finalCode;
         
@@ -278,7 +308,7 @@ ${hasSecretText ? `		<!--text/시크릿혜택가인 경우만 추가-->
 
         // 자동 클립보드 복사
         navigator.clipboard.writeText(finalCode).then(() => {
-            alert('코드가 성공적으로 생성되었으며, 클립보드에 자동 복사되었습니다!');
+            alert('코드가 정렬되어 생성되었으며, 클립보드에 자동 복사되었습니다!');
         });
     }
 
